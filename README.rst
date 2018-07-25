@@ -1,7 +1,10 @@
 SonyPy - Implements the Sony Camera Remote API
 ==============================================
 
+This Program was first wrtten by Scott Torborg. However, it was designed for Python 2. Now with my modifications it's working with Python 3 on Windows platform. Some regexs are fixed and the binary streams are better handled so the stream_liveview function works. You can show the liveview using cv2, or you can decode the binary stream yourself. Have a try with your sony cameras!!!
+
 Scott Torborg - `Cart Logic <http://www.cartlogic.com>`_
+Zander Mao `<mailto:sherlingford@foxmail.com>` 
 
 
 Installation
