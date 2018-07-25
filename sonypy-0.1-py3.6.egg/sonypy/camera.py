@@ -1,3 +1,6 @@
+# -*- coding: UTF-8 -*- #
+# Author: Zander_M
+# Time: 七月, 22, 2018
 import requests
 import json
 import struct
@@ -21,22 +24,24 @@ class RawCamera(object):
     version = "1.0"
 
     def __init__(self, endpoint):
-        self.endpoint = endpoint
+        self.endpoint = endpoint+ '/camera/' #changed
 
     def _do_request(self, method, *args):
         body = dict(method=method,
                     params=args,
                     id=1,
                     version=self.version)
+        print(body)
         data = json.dumps(body)
         r = requests.post(self.endpoint, data=data)
-        resp = r.json
-        assert resp['id'] == 1
+        print(r)
+        resp = r.json()
+        assert resp['id'] == 1 # TODO: FIX the POST data!
         error = resp.get('error')
         if error:
             self._handle_error(error)
         else:
-            return resp['results']
+            return resp['result']
 
     def _handle_error(self, error):
         raise CameraError(*error)
@@ -122,6 +127,11 @@ class RawCamera(object):
         """
         result = self._do_request('startLiveview')
         return result[0]
+    
+    def start_liveview_with_size(self, size):
+
+        result = self._do_request("startLiveviewWithSize", size) 
+        return result [0]
 
     def stop_liveview(self):
         """
@@ -263,35 +273,55 @@ class RawCamera(object):
         return self._do_request('getMethodTypes')
 
     def _decode_common_header(self, buf):
-        start, ptype, seq, timestamp = struct.unpack('BBHI', buf)
-        return seq, timestamp
+        start, ptype, seq, timestamp = struct.unpack('!ccHI', buf)
+        # print (start, ptype, seq, timestamp)
+        return seq, timestamp, ptype
 
-    def _decode_payload_header(self, buf):
-        format = 'IBBBBIB'
-        buf = buf[:struct.calcsize(format)]
-        d = struct.unpack(format, buf)
+    def _decode_payload_header(self, buf, ptype):
+        format = '!4s3ss'
+        hd = buf[:struct.calcsize(format)]
+        d = struct.unpack(format, hd)
         start = d[0]
-        assert start == '\x24\x35\x68\x79', "payload start mismatch"
-        jpeg_size = struct.pack('I', [0] + d[1])
-        padding_size = d[2]
+        assert start == b'\x24\x35\x68\x79', "payload start mismatch"
+        jpeg_size = int.from_bytes(d[1], byteorder = 'big')  # cvt byte num to int 
+        padding_size = int.from_bytes(d[2], byteorder = 'big')
+        print(jpeg_size, padding_size)
         return jpeg_size, padding_size
+        # jpeg_size = struct.pack('I', 0 + d[1])
+        # if ptype == b"0x01":
+        #     fmt = '!4sB'
+        #     jpeg_size = d[1]
+        #     print(jpeg_size)
+        #     padding_size = d[2]
+        #     return jpeg_size, padding_size
+        # elif ptype == b"0x01":
+        #     fmt = '!H'
+        #     pass
 
     def stream_liveview(self, url):
         """
         Connect to a liveview-format URL and yield a series of JPEG frames.
         """
-        r = requests.get(url)
+        r = requests.request("GET", url, stream = True)
         while True:
             # Read common header, 8 bytes.
-            seq, timestamp = self._decode_common_header(r.raw.read(8))
-            # Read payload header, 128 bytes.
+            seq, timestamp, ptype= self._decode_common_header(r.raw.read(8))
             jpeg_size, padding_size = \
-                self._decode_payload_header(r.raw.read(128))
-            # Read JPEG frame.
-            jpeg_frame = r.raw.read(jpeg_size)
-            # Throw away the padding.
+                self._decode_payload_header(r.raw.read(128), ptype)
+            import time
+            bjpg = r.raw.read(jpeg_size)
             r.raw.read(padding_size)
-            yield jpeg_frame
+            yield bjpg
+            # Read payload header, 128 bytes.
+            
+            # if ptype == b'0x01':
+            #     jpeg_size, padding_size = \
+            #         self._decode_payload_header(r.raw.read(128), ptype)
+            #     # Read JPEG frame.
+            #     jpeg_frame = r.raw.read(jpeg_size)
+            #     # Throw away the padding.
+            #     r.raw.read(padding_size)
+            #     yield jpeg_frame
 
 
 class Camera(RawCamera):

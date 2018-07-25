@@ -1,0 +1,12 @@
+README.rst
+setup.cfg
+setup.py
+sonypy/__init__.py
+sonypy/camera.py
+sonypy/discovery.py
+sonypy.egg-info/PKG-INFO
+sonypy.egg-info/SOURCES.txt
+sonypy.egg-info/dependency_links.txt
+sonypy.egg-info/not-zip-safe
+sonypy.egg-info/requires.txt
+sonypy.egg-info/top_level.txt

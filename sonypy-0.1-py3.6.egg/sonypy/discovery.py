@@ -1,3 +1,8 @@
+# -*- coding: UTF-8 -*- 
+# Author: Zander_M
+# Time: 七月, 22, 2018
+# Title: SonyPy test 
+
 import socket
 import re
 import requests
@@ -19,17 +24,7 @@ discovery_msg = ('M-SEARCH * HTTP/1.1\r\n'
                  '\r\n')
 
 
-dd_regex = ('<av:X_ScalarWebAPI_Service>'
-            '\s*'
-            '<av:X_ScalarWebAPI_ServiceType>'
-            '(.+)'
-            '</av:X_ScalarWebAPI_ServiceType>'
-            '<av:X_ScalarWebAPI_ActionList_URL>'
-            '(.+)'
-            '</av:X_ScalarWebAPI_ActionList_URL>'
-            '\s*'
-            '</av:X_ScalarWebAPI_Service>')
-
+dd_regex = ('<av:X_ScalarWebAPI_Service>\n\s*<av:X_ScalarWebAPI_ServiceType>(.*)<\/av:X_ScalarWebAPI_ServiceType>\n\s*<av:X_ScalarWebAPI_ActionList_URL>(.*)<\/av:X_ScalarWebAPI_ActionList_URL>\n\s*<av:X_ScalarWebAPI_AccessType\/>\n\s*<\/av:X_ScalarWebAPI_Service>')
 
 class Discoverer(object):
     camera_class = Camera
@@ -41,7 +36,10 @@ class Discoverer(object):
                 yield addr
 
     def _parse_ssdp_response(self, data):
-        lines = data.split('\n')
+        lines = data.split('\r\n')
+        lines.pop()
+        lines.pop()
+        print(lines)
         assert lines[0] == 'HTTP/1.1 200 OK'
         headers = {}
         for line in lines[1:]:
@@ -63,7 +61,7 @@ class Discoverer(object):
                         2)
         for _ in range(2):
             msg = discovery_msg % (SSDP_ADDR, SSDP_PORT, SSDP_MX)
-            sock.sendto(msg, (SSDP_ADDR, SSDP_PORT))
+            sock.sendto(msg.encode(encoding = "utf8"), (SSDP_ADDR, SSDP_PORT))
 
         try:
             data = sock.recv(1024)
@@ -73,7 +71,7 @@ class Discoverer(object):
         else:
             print("*****")
             print(data)
-            yield self._parse_ssdp_response(data)
+            yield self._parse_ssdp_response(str(data, encoding='utf8'))
 
     def _parse_device_definition(self, doc):
         """
@@ -81,9 +79,7 @@ class Discoverer(object):
         """
         services = {}
         for m in re.findall(dd_regex, doc):
-            service_name = m.group(1)
-            endpoint = m.group(2)
-            services[service_name] = endpoint
+            services[m[0]] = m[1]
         return services
 
     def _read_device_definition(self, url):
@@ -93,6 +89,7 @@ class Discoverer(object):
         """
         r = requests.get(url)
         services = self._parse_device_definition(r.text)
+        print(services)
         return services['camera']
 
     def discover(self):
@@ -100,5 +97,6 @@ class Discoverer(object):
         for resp in self._ssdp_discover():
             url = resp['location']
             endpoint = self._read_device_definition(url)
+            print("endpoint: ",endpoint)
             endpoints.append(endpoint)
         return [self.camera_class(endpoint) for endpoint in endpoints]

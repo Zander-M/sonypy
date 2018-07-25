@@ -1,0 +1,15 @@
+Metadata-Version: 1.1
+Name: sonypy
+Version: 0.1
+Summary: Remote Control of Sony Cameras
+Home-page: http://github.com/storborg/sonypy
+Author: Scott Torborg
+Author-email: scott@cartlogic.com
+License: MIT
+Description: UNKNOWN
+Keywords: sony camera remote control a7 nex
+Platform: UNKNOWN
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 2
+Classifier: Programming Language :: Python :: 2.7
